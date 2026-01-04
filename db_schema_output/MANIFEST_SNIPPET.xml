@@ -1,0 +1,41 @@
+<!-- Add these to your AndroidManifest.xml -->
+
+<!-- Permissions for external apps to access the ContentProvider -->
+<permission
+    android:name="com.togetherinrange.hummingbird.xdrip.permission.READ_DATA"
+    android:label="Read Hummingbird xDrip Data"
+    android:description="Allows reading glucose readings, treatments, and other health data"
+    android:protectionLevel="dangerous" />
+
+<permission
+    android:name="com.togetherinrange.hummingbird.xdrip.permission.WRITE_DATA"
+    android:label="Write Hummingbird xDrip Data"
+    android:description="Allows writing treatments and other data"
+    android:protectionLevel="dangerous" />
+
+<!-- ContentProvider registration -->
+<provider
+    android:name="com.togetherinrange.hummingbird.xdrip.db.provider.HummingbirdContentProvider"
+    android:authorities="com.togetherinrange.hummingbird.xdrip.provider"
+    android:exported="true"
+    android:readPermission="com.togetherinrange.hummingbird.xdrip.permission.READ_DATA"
+    android:writePermission="com.togetherinrange.hummingbird.xdrip.permission.WRITE_DATA">
+
+    <!-- Optional: Specify which paths are accessible -->
+    <path-permission
+        android:pathPrefix="/glucose_readings"
+        android:readPermission="com.togetherinrange.hummingbird.xdrip.permission.READ_DATA" />
+    <path-permission
+        android:pathPrefix="/treatments"
+        android:readPermission="com.togetherinrange.hummingbird.xdrip.permission.READ_DATA"
+        android:writePermission="com.togetherinrange.hummingbird.xdrip.permission.WRITE_DATA" />
+    <path-permission
+        android:pathPrefix="/sensors"
+        android:readPermission="com.togetherinrange.hummingbird.xdrip.permission.READ_DATA" />
+    <path-permission
+        android:pathPrefix="/blood_tests"
+        android:readPermission="com.togetherinrange.hummingbird.xdrip.permission.READ_DATA" />
+    <path-permission
+        android:pathPrefix="/calibrations"
+        android:readPermission="com.togetherinrange.hummingbird.xdrip.permission.READ_DATA" />
+</provider>

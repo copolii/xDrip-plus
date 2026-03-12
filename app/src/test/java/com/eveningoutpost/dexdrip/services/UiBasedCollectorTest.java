@@ -80,6 +80,27 @@ public class UiBasedCollectorTest extends RobolectricTestWithConfig {
         assertWithMessage("invalid IoB message (extra text)").that(i.parseIoB(invalidExtraText)).isNull();
     }
 
+    @Test
+    public void isNonNumericGlucoseStatusTest() {
+        // Localized HIGH/LOW strings should be detected
+        assertWithMessage("English HIGH").that(UiBasedCollector.isNonNumericGlucoseStatus("HIGH")).isTrue();
+        assertWithMessage("English LOW").that(UiBasedCollector.isNonNumericGlucoseStatus("LOW")).isTrue();
+        assertWithMessage("French ÉLEVÉ").that(UiBasedCollector.isNonNumericGlucoseStatus("ÉLEVÉ")).isTrue();
+        assertWithMessage("German HOCH").that(UiBasedCollector.isNonNumericGlucoseStatus("HOCH")).isTrue();
+        assertWithMessage("Spanish ALTO").that(UiBasedCollector.isNonNumericGlucoseStatus("ALTO")).isTrue();
+        assertWithMessage("French BAS").that(UiBasedCollector.isNonNumericGlucoseStatus("BAS")).isTrue();
+
+        // Numeric values should not match
+        assertWithMessage("number").that(UiBasedCollector.isNonNumericGlucoseStatus("123")).isFalse();
+        assertWithMessage("mmol value").that(UiBasedCollector.isNonNumericGlucoseStatus("5.6")).isFalse();
+        assertWithMessage("mixed").that(UiBasedCollector.isNonNumericGlucoseStatus("HIGH1")).isFalse();
+
+        // Empty/null/long strings should not match
+        assertWithMessage("null").that(UiBasedCollector.isNonNumericGlucoseStatus(null)).isFalse();
+        assertWithMessage("empty").that(UiBasedCollector.isNonNumericGlucoseStatus("")).isFalse();
+        assertWithMessage("too long").that(UiBasedCollector.isNonNumericGlucoseStatus("Very Long Status Text")).isFalse();
+    }
+
     // standard 5 minute apart readings are all accepted
     @Test
     public void deDupeTest1() {

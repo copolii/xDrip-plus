@@ -274,9 +274,15 @@ public class UiBasedCollector extends NotificationListenerService {
             int mgdl;
             String t;
             if (notification.extras != null
-                    && (isValidString(t = notification.extras.getString(Notification.EXTRA_TITLE)))
-                    && (mgdl = tryExtractString(t)) > 0) {
-                handleNewValue(mgdl);
+                    && (isValidString(t = notification.extras.getString(Notification.EXTRA_TITLE)))) {
+                mgdl = tryExtractString(t);
+                if (mgdl > 0) {
+                    handleNewValue(mgdl);
+                } else if (isNonNumericGlucoseStatus(filterString(t))) {
+                    handleNonNumericGlucoseStatus();
+                } else {
+                    UserError.Log.e(TAG, "Content is empty");
+                }
             } else {
                 UserError.Log.e(TAG, "Content is empty");
             }
@@ -340,6 +346,7 @@ public class UiBasedCollector extends NotificationListenerService {
         UserError.Log.d(TAG, "Text views: " + texts.size());
         int matches = 0;
         int mgdl = 0;
+        boolean foundNonNumericStatus = false;
         for (val view : texts) {
             try {
                 val tv = (TextView) view;
@@ -350,6 +357,11 @@ public class UiBasedCollector extends NotificationListenerService {
                 if (lmgdl > 0) {
                     mgdl = lmgdl;
                     matches++;
+                } else if (!foundNonNumericStatus) {
+                    val ftext = filterString(text);
+                    if (isNonNumericGlucoseStatus(ftext)) {
+                        foundNonNumericStatus = true;
+                    }
                 }
             } catch (Exception e) {
                 //
@@ -357,12 +369,55 @@ public class UiBasedCollector extends NotificationListenerService {
         }
         texts.clear();
         if (matches == 0) {
+            if (foundNonNumericStatus) {
+                return handleNonNumericGlucoseStatus();
+            }
             UserError.Log.d(TAG, "Did not find any matches");
         } else if (matches > 1) {
             UserError.Log.e(TAG, "Found too many matches: " + matches);
         } else {
             handleNewValue(mgdl);
             return true;
+        }
+        return false;
+    }
+
+    /**
+     * Detect non-numeric glucose status by elimination rather than string matching.
+     * When the Dexcom app displays HIGH or LOW (in any locale), the notification
+     * text will be a short alphabetic string with no digits after filtering.
+     */
+    @VisibleForTesting
+    static boolean isNonNumericGlucoseStatus(final String filteredText) {
+        if (filteredText == null || filteredText.isEmpty()) return false;
+        if (filteredText.length() > 10) return false;
+        for (final char c : filteredText.toCharArray()) {
+            if (Character.isDigit(c)) return false;
+        }
+        return true;
+    }
+
+    private boolean handleNonNumericGlucoseStatus() {
+        try {
+            val last = BgReading.last();
+            if (last != null) {
+                val lastValue = last.getDg_mgdl();
+                if (lastValue >= 300) {
+                    UserError.Log.d(TAG, "Non-numeric status with last value " + lastValue + " -> treating as HIGH");
+                    handleNewValue(BgReading.BG_READING_MAXIMUM_VALUE + 1);
+                    return true;
+                } else if (lastValue <= 80) {
+                    UserError.Log.d(TAG, "Non-numeric status with last value " + lastValue + " -> treating as LOW");
+                    handleNewValue(BgReading.BG_READING_MINIMUM_VALUE + 1);
+                    return true;
+                } else {
+                    UserError.Log.wtf(TAG, "Non-numeric glucose status but last value " + lastValue + " is mid-range - ignoring");
+                }
+            } else {
+                UserError.Log.wtf(TAG, "Non-numeric glucose status but no previous reading available");
+            }
+        } catch (Exception e) {
+            UserError.Log.e(TAG, "Exception in handleNonNumericGlucoseStatus: " + e);
         }
         return false;
     }
